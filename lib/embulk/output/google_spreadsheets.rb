@@ -16,24 +16,41 @@ module Embulk
           # optional
           "worksheet_gid"  => config.param("worksheet_gid",  :integer, default: 0),
           "mode"           => config.param("mode",           :string,  default: "append"), # available mode are `replace` and `append`
-          "is_write_header"=> config.param("is_write_header",:boolean, default: false),
+          "is_write_header"=> config.param("is_write_header",:bool,    default: false),
+          "start_cell"     => config.param("start_cell",     :string,  default: "A1"),
           "null_representation" => config.param("null_representation", :string,  default: ""),
         }
 
-        start_cell = config.param("start_cell", :string,  default: "A1")
-        mode       = task["mode"].to_sym
-
+        mode = task["mode"].to_sym
         raise "unsupported mode: #{mode.inspect}" unless [:append, :replace].include? mode
 
         worksheet = build_worksheet_client(task)
-        task["row_index"], task["col_index"] = determine_start_index(worksheet, mode, start_cell, schema)
+
+        #
+        # prepare to write records
+        #
+        determine_start_index(worksheet, task, schema, mode)
+
         if mode == :replace
           clean_previous_records(worksheet, schema, task)
         end
 
+        if task['is_write_header']
+          write_header(worksheet, schema, task, mode)
+        end
+
+        worksheet.save
+
         task_reports = yield(task)
         next_config_diff = {}
         return next_config_diff
+      end
+
+      def self.write_header(worksheet, schema, task, mode)
+        r, c = worksheet.cell_name_to_row_col(task['start_cell'])
+        worksheet.update_cells(r, c, [schema.names])
+
+        task["row_index"] += 1 unless task["previous_record_exists"]
       end
 
       def self.clean_previous_records(worksheet, schema, task)
@@ -95,15 +112,25 @@ module Embulk
           .worksheet_by_gid(task["worksheet_gid"])
       end
 
-      def self.determine_start_index(worksheet, mode, start_cell, schema)
-        start_row_index, start_col_index = worksheet.cell_name_to_row_col(start_cell)
+      def self.determine_start_index(worksheet, task, schema, mode)
+        start_row_index, start_col_index = worksheet.cell_name_to_row_col(task["start_cell"])
+
+        task["row_index"] = start_row_index
+        task["col_index"] = start_col_index
+
+        previous_record_exists = false
 
         if mode == :append
-          column_range = Range.new(start_col_index, start_col_index + schema.length)
-          start_row_index = [last_record_index(worksheet, column_range) + 1, start_row_index].max
+          column_range = start_col_index...(start_col_index + schema.length)
+          next_row_index = last_record_index(worksheet, column_range) + 1
+
+          if start_row_index < next_row_index
+            previous_record_exists = true
+            task["row_index"] = next_row_index
+          end
         end
 
-        [start_row_index, start_col_index]
+        task["previous_record_exists"] = previous_record_exists
       end
 
       def self.last_record_index(worksheet, column_range)
