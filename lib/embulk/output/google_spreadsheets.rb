@@ -27,10 +27,24 @@ module Embulk
 
         worksheet = build_worksheet_client(task)
         task["row_index"], task["col_index"] = determine_start_index(worksheet, mode, start_cell, schema)
+        if mode == :replace
+          clean_previous_records(worksheet, schema, task)
+        end
 
         task_reports = yield(task)
         next_config_diff = {}
         return next_config_diff
+      end
+
+      def self.clean_previous_records(worksheet, schema, task)
+        row_range    = task["row_index"]..worksheet.num_rows
+        column_range = task["col_index"]...(task["col_index"] + schema.length)
+
+        row_range.each do |row|
+          column_range.each do |col|
+            worksheet[row, col] = ''
+          end
+        end
       end
 
       def init
