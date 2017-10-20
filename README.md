@@ -36,13 +36,6 @@ if use oauth, should be included the `refresh_token` field in credential json fi
 
 ## Example
 
-```yaml
-out:
-  type: google_spreadsheets
-  option1: example1
-  option2: example2
-```
-
 ```
 out:
   type: google_spreadsheets
