@@ -1,7 +1,5 @@
 # Google Spreadsheets output plugin for Embulk
 
-TODO: Write short description here and embulk-output-google_spreadsheets.gemspec file.
-
 ## Overview
 
 * **Plugin type**: output
