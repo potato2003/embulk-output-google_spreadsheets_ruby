@@ -54,6 +54,7 @@ out:
   mode: replace
   start_cell: 'B2'
   is_write_header: false
+  null_representation: '(NULL)'
 ```
 
 
