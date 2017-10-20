@@ -22,7 +22,7 @@ TODO: Write short description here and embulk-output-google_spreadsheets.gemspec
 
 **json_keyfile**
 
-specific the credential file which the Google Developer Console for authorization.
+specific the credential file which the Google Developer Console provides for authorization.
 https://console.developers.google.com/apis/credentials
 if use oauth, should be included the `refresh_token` field in credential json file.
 
