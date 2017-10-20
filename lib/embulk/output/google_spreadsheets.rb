@@ -46,24 +46,6 @@ module Embulk
         return next_config_diff
       end
 
-      def self.write_header(worksheet, schema, task, mode)
-        r, c = worksheet.cell_name_to_row_col(task['start_cell'])
-        worksheet.update_cells(r, c, [schema.names])
-
-        task["row_index"] += 1 unless task["previous_record_exists"]
-      end
-
-      def self.clean_previous_records(worksheet, schema, task)
-        row_range    = task["row_index"]..worksheet.num_rows
-        column_range = task["col_index"]...(task["col_index"] + schema.length)
-
-        row_range.each do |row|
-          column_range.each do |col|
-            worksheet[row, col] = ''
-          end
-        end
-      end
-
       def init
         @mode        = task["mode"].to_sym
         @row         = task["row_index"]
@@ -139,6 +121,24 @@ module Embulk
           .select {|(_, col_index), value|  not value.empty? and column_range.include? col_index }
           .map    {|(row_index, _), _| row_index }
           .max or 0
+      end
+
+      def self.write_header(worksheet, schema, task, mode)
+        r, c = worksheet.cell_name_to_row_col(task['start_cell'])
+        worksheet.update_cells(r, c, [schema.names])
+
+        task["row_index"] += 1 unless task["previous_record_exists"]
+      end
+
+      def self.clean_previous_records(worksheet, schema, task)
+        row_range    = task["row_index"]..worksheet.num_rows
+        column_range = task["col_index"]...(task["col_index"] + schema.length)
+
+        row_range.each do |row|
+          column_range.each do |col|
+            worksheet[row, col] = ''
+          end
+        end
       end
 
       def format(type, v)
