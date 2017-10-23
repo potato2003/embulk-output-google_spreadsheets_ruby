@@ -1,6 +1,4 @@
 require 'google_drive'
-require 'active_support'
-require 'active_support/time'
 
 module Embulk
   module Output
@@ -21,7 +19,8 @@ module Embulk
           "is_write_header_line"=> config.param("is_write_header_line",:bool,    default: false),
           "start_cell"     => config.param("start_cell",     :string,  default: "A1"),
           "null_string"    => config.param("null_string",    :string,  default: ""),
-          "default_timezone" => config.param("default_timezone", :string,  default: "UTC"),
+          "default_timezone" => config.param("default_timezone",  :string,  default: "+09:00"),
+          "default_timezone_format" => config.param("default_timezone_format", :string,  default: "%Y-%m-%d %H:%M:%S.%6N %z"),
         }
 
         mode = task["mode"].to_sym
@@ -56,8 +55,6 @@ module Embulk
         @null_string = task["null_string"]
 
         @worksheet = self.class.build_worksheet_client(task)
-
-        Time.zone = task["default_timezone"]
       end
 
       def close
@@ -151,7 +148,10 @@ module Embulk
 
         case type
         when :timestamp
-          v.in_time_zone.strftime('%Y-%m-%d %H:%M:%S %Z')
+          zone_offset = task['default_timezone']
+          format      = task['default_timezone_format']
+
+          v.dup.localtime(zone_offset).strftime(format)
         when :json
           v.to_json
         else

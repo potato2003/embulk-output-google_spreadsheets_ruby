@@ -17,7 +17,8 @@
 - start_cell (string, default: 'A1'): specific the index of first record by the A1
   notation.
 - null_string (string, default: ''): replace null to `null_string`
-- default_timezone (string, default: 'UTC'): time zone of timestamp columns
+- default_timezone (string, default: '+00:00'): time zone offset of timestamp columns
+- default_timezone_format (string, default: '%Y-%m-%d %H:%M:%S.%6N %z'): output format of timestamp columns
 
 **json_keyfile**
 
