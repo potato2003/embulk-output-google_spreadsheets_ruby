@@ -13,10 +13,10 @@
 - spreadsheet_id (string, required): your spreadsheet's id
 - worksheet_gid (integer, default: 0): worksheet's gid if you want to specific worksheet
 - mode (string, default: append): writing record method, available mode are `append` and `replace`
-- is_write_header (bool, default: false): if true, write header to first record
+- is_write_header_line (bool, default: false): if true, write header to first record
 - start_cell (string, default: 'A1'): specific the index of first record by the A1
   notation.
-- null_representation (string, default: ''): replace null to `null_representation`
+- null_string (string, default: ''): replace null to `null_string`
 
 **json_keyfile**
 
@@ -44,8 +44,8 @@ out:
   worksheet_gid: 1519744516
   mode: replace
   start_cell: 'B2'
-  is_write_header: false
-  null_representation: '(NULL)'
+  is_write_header_line: false
+  null_string : '(NULL)'
 ```
 
 

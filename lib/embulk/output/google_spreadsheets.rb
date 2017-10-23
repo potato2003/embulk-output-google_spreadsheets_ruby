@@ -16,9 +16,9 @@ module Embulk
           # optional
           "worksheet_gid"  => config.param("worksheet_gid",  :integer, default: 0),
           "mode"           => config.param("mode",           :string,  default: "append"), # available mode are `replace` and `append`
-          "is_write_header"=> config.param("is_write_header",:bool,    default: false),
+          "is_write_header_line"=> config.param("is_write_header_line",:bool,    default: false),
           "start_cell"     => config.param("start_cell",     :string,  default: "A1"),
-          "null_representation" => config.param("null_representation", :string,  default: ""),
+          "null_string"    => config.param("null_string",    :string,  default: ""),
         }
 
         mode = task["mode"].to_sym
@@ -35,8 +35,8 @@ module Embulk
           clean_previous_records(worksheet, schema, task)
         end
 
-        if task['is_write_header']
-          write_header(worksheet, schema, task, mode)
+        if task['is_write_header_line']
+          write_header_line(worksheet, schema, task, mode)
         end
 
         worksheet.save
@@ -50,7 +50,7 @@ module Embulk
         @mode        = task["mode"].to_sym
         @row         = task["row_index"]
         @col         = task["col_index"]
-        @null_representation = task["null_representation"]
+        @null_string = task["null_string"]
 
         @worksheet = self.class.build_worksheet_client(task)
       end
@@ -123,7 +123,7 @@ module Embulk
           .max or 0
       end
 
-      def self.write_header(worksheet, schema, task, mode)
+      def self.write_header_line(worksheet, schema, task, mode)
         r, c = worksheet.cell_name_to_row_col(task['start_cell'])
         worksheet.update_cells(r, c, [schema.names])
 
@@ -142,8 +142,8 @@ module Embulk
       end
 
       def format(type, v)
-        return @null_representation if v.nil?
-        v
+        return @null_string if v.nil?
+
       end
     end
   end
