@@ -9,13 +9,14 @@
 
 ## Configuration
 
-- json_keyfile (string, required): credential file path
-- spreadsheet_id (string, required): your spreadsheet's id
-- worksheet_gid (integer, default: 0): worksheet's gid if you want to specific worksheet
+- auth_method (string, default: 'authorized_user'): 'authorized_user' or 'service_account'
+- json_keyfile (string, required): credential file path or `content` string
+- spreadsheet_url (string, required): your spreadsheet's url
+- worksheet_title (string, required): worksheet's title
 - mode (string, default: append): writing record method, available mode are `append` and `replace`
-- is_write_header_line (bool, default: false): if true, write header to first record
-- start_cell (string, default: 'A1'): specific the index of first record by the A1
-  notation.
+- header_line (bool, default: false): if true, write header to first record
+- start_row (integer, default: 1): specific the start row
+- start_column (integer, default: 1): specific the start column
 - null_string (string, default: ''): replace null to `null_string`
 - default_timezone (string, default: '+00:00'): time zone offset of timestamp columns
 - default_timezone_format (string, default: '%Y-%m-%d %H:%M:%S.%6N %z'): output format of timestamp columns
@@ -34,21 +35,27 @@ if use oauth, should be included the `refresh_token` field in credential json fi
 }
 ```
 
-**mode**
-
 ## Example
 
 ```
 out:
   type: google_spreadsheets
-  json_keyfile: './keyfile.json'
-  spreadsheet_id: '16RSM_xj5ZB4rz0WBlnIbD1KHO46KASnAY04e_oYUSEE'
-  worksheet_gid: 1519744516
-  mode: replace
-  start_cell: 'B2'
-  is_write_header_line: false
+  json_keyfile:
+    content: |
+      {
+        "client_id": "******************************************************",
+        "client_secret": "***************************",
+        "refresh_token": "***************************"
+      }
+  # json_keyfile: './keyfile.json'
+  spreadsheet_url: 'https://docs.google.com/spreadsheets/d/16RSM_xj5ZB4rz0WBlnIbD1KHO46KASnAY04e_oYUSEE/edit'
+  worksheet_title: 'シート1'
+  start_row: 1
+  start_column: 1
+  header_line: true
   null_string : '(NULL)'
-  default_timezone: 'Asia/Tokyo'
+  default_timezone: '+09:00'
+  default_timezone_format: "%Y-%m-%d %H:%M:%S %z"
 ```
 
 
