@@ -17,6 +17,7 @@
 - start_cell (string, default: 'A1'): specific the index of first record by the A1
   notation.
 - null_string (string, default: ''): replace null to `null_string`
+- default_timezone (string, default: 'UTC'): time zone of timestamp columns
 
 **json_keyfile**
 
@@ -46,6 +47,7 @@ out:
   start_cell: 'B2'
   is_write_header_line: false
   null_string : '(NULL)'
+  default_timezone: 'Asia/Tokyo'
 ```
 
 
