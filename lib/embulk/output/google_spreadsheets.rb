@@ -42,7 +42,7 @@ module Embulk
           "start_column"     => config.param("start_column",      :integer, default: 1),
           "start_row"        => config.param("start_row",         :integer, default: 1),
           "null_string"      => config.param("null_string",       :string,  default: ""),
-          "default_timezone" => config.param("default_timezone",  :string,  default: "+09:00"),
+          "default_timezone" => config.param("default_timezone",  :string,  default: "+00:00"),
           "default_timestamp_format" => config.param("default_timestamp_format", :string,  default: "%Y-%m-%d %H:%M:%S.%6N %z"),
         }
 
