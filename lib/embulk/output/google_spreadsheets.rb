@@ -43,7 +43,7 @@ module Embulk
           "start_row"        => config.param("start_row",         :integer, default: 1),
           "null_string"      => config.param("null_string",       :string,  default: ""),
           "default_timezone" => config.param("default_timezone",  :string,  default: "+09:00"),
-          "default_timezone_format" => config.param("default_timezone_format", :string,  default: "%Y-%m-%d %H:%M:%S.%6N %z"),
+          "default_timestamp_format" => config.param("default_timestamp_format", :string,  default: "%Y-%m-%d %H:%M:%S.%6N %z"),
         }
 
         mode = task["mode"].to_sym
@@ -179,7 +179,8 @@ module Embulk
         case type
         when :timestamp
           zone_offset = task['default_timezone']
-          format      = task['default_timezone_format']
+
+          format      = task['default_timestamp_format']
 
           v.dup.localtime(zone_offset).strftime(format)
         when :json

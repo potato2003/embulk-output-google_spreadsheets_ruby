@@ -19,7 +19,7 @@
 - start_column (integer, default: 1): specific the start column
 - null_string (string, default: ''): replace null to `null_string`
 - default_timezone (string, default: '+00:00'): time zone offset of timestamp columns
-- default_timezone_format (string, default: '%Y-%m-%d %H:%M:%S.%6N %z'): output format of timestamp columns
+- default_timestamp_format (string, default: '%Y-%m-%d %H:%M:%S.%6N %z'): output format of timestamp columns
 
 **json_keyfile**
 
@@ -55,7 +55,7 @@ out:
   header_line: true
   null_string : '(NULL)'
   default_timezone: '+09:00'
-  default_timezone_format: "%Y-%m-%d %H:%M:%S %z"
+  default_timestamp_format: "%Y-%m-%d %H:%M:%S %z"
 ```
 
 
