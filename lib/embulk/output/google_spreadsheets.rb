@@ -46,6 +46,9 @@ module Embulk
           "default_timestamp_format" => config.param("default_timestamp_format", :string,  default: "%Y-%m-%d %H:%M:%S.%6N %z"),
         }
 
+        # support 'UTC' specially
+        task["default_timezone"] = "+00:00" if task["default_timezone"] == 'UTC'
+
         mode = task["mode"].to_sym
         raise "unsupported mode: #{mode.inspect}" unless [:append, :replace].include? mode
 
@@ -179,8 +182,6 @@ module Embulk
         case type
         when :timestamp
           zone_offset = task['default_timezone']
-          zone_offset = '+00:00' if zone_offset == 'UTC'
-
           format      = task['default_timestamp_format']
 
           v.dup.localtime(zone_offset).strftime(format)
