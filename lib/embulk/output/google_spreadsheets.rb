@@ -179,6 +179,7 @@ module Embulk
         case type
         when :timestamp
           zone_offset = task['default_timezone']
+          zone_offset = '+00:00' if zone_offset == 'UTC'
 
           format      = task['default_timestamp_format']
 
