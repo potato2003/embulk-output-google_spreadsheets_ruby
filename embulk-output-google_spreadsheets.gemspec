@@ -1,4 +1,3 @@
-
 Gem::Specification.new do |spec|
   spec.name          = "embulk-output-google_spreadsheets"
   spec.version       = "0.1.0"

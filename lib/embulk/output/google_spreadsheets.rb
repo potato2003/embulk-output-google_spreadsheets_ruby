@@ -1,4 +1,6 @@
 require 'google_drive'
+require 'googleauth'
+require 'google/apis/sheets_v4'
 
 module Embulk
   module Output
@@ -6,20 +8,46 @@ module Embulk
     class GoogleSpreadsheets < OutputPlugin
       Plugin.register_output("google_spreadsheets", self)
 
+      DEFAULT_SCOPE = [
+       'https://www.googleapis.com/auth/drive',
+       'https://spreadsheets.google.com/feeds/'
+      ]
+
+      # support config by file path or content which supported by org.embulk.spi.unit.LocalFile
+      # json_keyfile:
+      #   content: |
+      class LocalFile
+        # return JSON string
+        def self.load(v)
+          if v.is_a?(String)
+            File.read(v)
+          elsif v.is_a?(Hash)
+            v['content']
+          end
+        end
+      end
+
       def self.transaction(config, schema, count, &control)
         # configuration code:
         task = {
           # required
-          "json_keyfile"   => config.param("json_keyfile",   :string),
-          "spreadsheet_id" => config.param("spreadsheet_id", :string),
+          "json_keyfile"     => config.param("json_keyfile",      LocalFile, nil),
+          "spreadsheet_url"  => config.param("spreadsheet_url",   :string),
+          "worksheet_title"  => config.param("worksheet_title",   :string),
 
           # optional
-          "worksheet_gid"  => config.param("worksheet_gid",  :integer, default: 0),
-          "mode"           => config.param("mode",           :string,  default: "append"), # available mode are `replace` and `append`
-          "is_write_header"=> config.param("is_write_header",:bool,    default: false),
-          "start_cell"     => config.param("start_cell",     :string,  default: "A1"),
-          "null_representation" => config.param("null_representation", :string,  default: ""),
+          "auth_method"      => config.param("auth_method",       :string,  default: "authorized_user"), # 'auth_method' or 'service_account'
+          "mode"             => config.param("mode",              :string,  default: "append"), # `replace` or `append`
+          "header_line"      => config.param("header_line",       :bool,    default: false),
+          "start_column"     => config.param("start_column",      :integer, default: 1),
+          "start_row"        => config.param("start_row",         :integer, default: 1),
+          "null_string"      => config.param("null_string",       :string,  default: ""),
+          "default_timezone" => config.param("default_timezone",  :string,  default: "+00:00"),
+          "default_timestamp_format" => config.param("default_timestamp_format", :string,  default: "%Y-%m-%d %H:%M:%S.%6N %z"),
         }
+
+        # support 'UTC' specially
+        task["default_timezone"] = "+00:00" if task["default_timezone"] == 'UTC'
 
         mode = task["mode"].to_sym
         raise "unsupported mode: #{mode.inspect}" unless [:append, :replace].include? mode
@@ -35,8 +63,8 @@ module Embulk
           clean_previous_records(worksheet, schema, task)
         end
 
-        if task['is_write_header']
-          write_header(worksheet, schema, task, mode)
+        if task['header_line']
+          write_header_line(worksheet, schema, task, mode)
         end
 
         worksheet.save
@@ -50,7 +78,7 @@ module Embulk
         @mode        = task["mode"].to_sym
         @row         = task["row_index"]
         @col         = task["col_index"]
-        @null_representation = task["null_representation"]
+        @null_string = task["null_string"]
 
         @worksheet = self.class.build_worksheet_client(task)
       end
@@ -89,24 +117,32 @@ module Embulk
       end
 
       def self.build_worksheet_client(task)
-        GoogleDrive::Session.from_config(task["json_keyfile"])
-          .spreadsheet_by_key(task["spreadsheet_id"])
-          .worksheet_by_gid(task["worksheet_gid"])
+        key = StringIO.new(JSON.parse(task['json_keyfile']).to_json)
+
+        credentials = case task['auth_method']
+        when 'authorized_user'
+          Google::Auth::UserRefreshCredentials.make_creds(json_key_io: key, scope: DEFAULT_SCOPE)
+        when 'service_account'
+          Google::Auth::ServiceAccountCredentials.make_creds(json_key_io: key, scope: DEFAULT_SCOPE)
+        else
+          raise ConfigError.new("Unknown auth method: #{task['auth_method']}")
+        end
+ 
+        GoogleDrive::Session.new(credentials)
+          .spreadsheet_by_url(task["spreadsheet_url"])
+          .worksheet_by_title(task["worksheet_title"])
       end
 
       def self.determine_start_index(worksheet, task, schema, mode)
-        start_row_index, start_col_index = worksheet.cell_name_to_row_col(task["start_cell"])
-
-        task["row_index"] = start_row_index
-        task["col_index"] = start_col_index
-
+        task["row_index"] = r = task["start_row"]
+        task["col_index"] = c = task["start_column"]
         previous_record_exists = false
 
         if mode == :append
-          column_range = start_col_index...(start_col_index + schema.length)
+          column_range = c...(c + schema.length)
           next_row_index = last_record_index(worksheet, column_range) + 1
 
-          if start_row_index < next_row_index
+          if r < next_row_index
             previous_record_exists = true
             task["row_index"] = next_row_index
           end
@@ -123,9 +159,8 @@ module Embulk
           .max or 0
       end
 
-      def self.write_header(worksheet, schema, task, mode)
-        r, c = worksheet.cell_name_to_row_col(task['start_cell'])
-        worksheet.update_cells(r, c, [schema.names])
+      def self.write_header_line(worksheet, schema, task, mode)
+        worksheet.update_cells(task["start_row"], task["start_column"], [schema.names])
 
         task["row_index"] += 1 unless task["previous_record_exists"]
       end
@@ -134,16 +169,27 @@ module Embulk
         row_range    = task["row_index"]..worksheet.num_rows
         column_range = task["col_index"]...(task["col_index"] + schema.length)
 
-        row_range.each do |row|
-          column_range.each do |col|
-            worksheet[row, col] = ''
+        row_range.each do |r|
+          column_range.each do |c|
+            worksheet[r, c] = ''
           end
         end
       end
 
       def format(type, v)
-        return @null_representation if v.nil?
-        v
+        return @null_string if v.nil?
+
+        case type
+        when :timestamp
+          zone_offset = task['default_timezone']
+          format      = task['default_timestamp_format']
+
+          v.dup.localtime(zone_offset).strftime(format)
+        when :json
+          v.to_json
+        else
+          v
+        end
       end
     end
   end
