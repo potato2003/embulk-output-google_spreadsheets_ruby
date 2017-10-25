@@ -16,5 +16,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'embulk', ['>= 0.8.35']
   spec.add_development_dependency 'bundler', ['>= 1.10.6']
   spec.add_development_dependency 'rake', ['>= 10.0']
-  spec.add_dependency 'google_drive', ['>= 2.1.6']
+  spec.add_dependency 'google_drive'
 end
