@@ -2,6 +2,8 @@ require 'google_drive'
 require 'googleauth'
 require 'google/apis/sheets_v4'
 
+require_relative 'ext_google_drive'
+
 module Embulk
   module Output
 
