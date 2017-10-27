@@ -37,7 +37,7 @@ module Embulk
 
           # optional
           "auth_method"      => config.param("auth_method",       :string,  default: "authorized_user"), # 'auth_method' or 'service_account'
-          "mode"             => config.param("mode",              :string,  default: "append"), # `replace` or `append`
+          "mode"             => config.param("mode",              :string,  default: "append_direct"), # `append_direct` or `delete_in_advance`
           "header_line"      => config.param("header_line",       :bool,    default: false),
           "start_column"     => config.param("start_column",      :integer, default: 1),
           "start_row"        => config.param("start_row",         :integer, default: 1),
@@ -50,7 +50,7 @@ module Embulk
         task["default_timezone"] = "+00:00" if task["default_timezone"] == 'UTC'
 
         mode = task["mode"].to_sym
-        raise "unsupported mode: #{mode.inspect}" unless [:append, :replace].include? mode
+        raise "unsupported mode: #{mode.inspect}" unless [:append_direct, :delete_in_advance].include? mode
 
         worksheet = build_worksheet_client(task)
 
@@ -59,7 +59,7 @@ module Embulk
         #
         determine_start_index(worksheet, task, schema, mode)
 
-        if mode == :replace
+        if mode == :delete_in_advance
           clean_previous_records(worksheet, schema, task)
         end
 
@@ -138,7 +138,7 @@ module Embulk
         task["col_index"] = c = task["start_column"]
         previous_record_exists = false
 
-        if mode == :append
+        if mode == :append_direct
           column_range = c...(c + schema.length)
           next_row_index = last_record_index(worksheet, column_range) + 1
 
