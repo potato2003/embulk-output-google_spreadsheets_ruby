@@ -1,17 +1,16 @@
-require 'google_drive'
+# frozen_string_literal: true
+
 require 'googleauth'
 require 'google/apis/sheets_v4'
+
+require_relative 'google_spreadsheets/write_buffer'
+require_relative 'google_spreadsheets/spreadsheets_client'
 
 module Embulk
   module Output
 
     class GoogleSpreadsheets < OutputPlugin
       Plugin.register_output("google_spreadsheets", self)
-
-      DEFAULT_SCOPE = [
-       'https://www.googleapis.com/auth/drive',
-       'https://spreadsheets.google.com/feeds/'
-      ]
 
       # support config by file path or content which supported by org.embulk.spi.unit.LocalFile
       # json_keyfile:
@@ -46,28 +45,27 @@ module Embulk
           "default_timestamp_format" => config.param("default_timestamp_format", :string,  default: "%Y-%m-%d %H:%M:%S.%6N %z"),
         }
 
+        #
+        # prepare to write records
+        #
+
         # support 'UTC' specially
         task["default_timezone"] = "+00:00" if task["default_timezone"] == 'UTC'
+
+        client = SpreadsheetsClient.new(task, schema)
 
         mode = task["mode"].to_sym
         raise "unsupported mode: #{mode.inspect}" unless [:append, :replace].include? mode
 
-        worksheet = build_worksheet_client(task)
-
-        #
-        # prepare to write records
-        #
-        determine_start_index(worksheet, task, schema, mode)
-
         if mode == :replace
-          clean_previous_records(worksheet, schema, task)
+          client.clear_records
         end
 
         if task['header_line']
-          write_header_line(worksheet, schema, task, mode)
+          client.write_header_line
         end
 
-        worksheet.save
+        Embulk.logger.info("set task: #{task.inspect}")
 
         task_reports = yield(task)
         next_config_diff = {}
@@ -76,39 +74,50 @@ module Embulk
 
       def init
         @mode        = task["mode"].to_sym
-        @row         = task["row_index"]
-        @col         = task["col_index"]
         @null_string = task["null_string"]
 
-        @worksheet = self.class.build_worksheet_client(task)
+        @client = SpreadsheetsClient.new(task, schema)
+        init_cursor @client
+        @buffer = WriteBuffer.new
       end
 
       def close
       end
 
       def add(page)
-        base_col_index = @col
+        num_records = 0
 
-        page.each do |record|
-          record_with_meta = schema.names.zip(schema.types, record)
+        page.each do |values|
+          record = schema.names.zip(schema.types, values)
 
-          record_with_meta.each do |(name, type, value)|
-            @worksheet[@row, @col] = format(type, value)
-
-            @col += 1
+          f = record.map do |(name, type, value)|
+            format(type, value)
           end
 
-          @col  = base_col_index
-          @row += 1
+          @buffer.write_record(f)
+          num_records += 1
         end
 
-        @worksheet.save
+        Embulk.logger.info("buffering #{num_records} records")
       end
 
       def finish
+        total = 0
+
+        @buffer.each_slice(1000) do |chunked_records|
+          Embulk.logger.debug { "flush buffer: write %d records to spreadsheet" % chunked_records.length }
+          total += chunked_records.length
+
+          @client.write_records(chunked_records)
+        end
+
+        Embulk.logger.info("finish to write total %d records" % total)
+
+        @buffer.close
       end
 
       def abort
+        @buffer.close
       end
 
       def commit
@@ -116,64 +125,8 @@ module Embulk
         return task_report
       end
 
-      def self.build_worksheet_client(task)
-        key = StringIO.new(JSON.parse(task['json_keyfile']).to_json)
-
-        credentials = case task['auth_method']
-        when 'authorized_user'
-          Google::Auth::UserRefreshCredentials.make_creds(json_key_io: key, scope: DEFAULT_SCOPE)
-        when 'service_account'
-          Google::Auth::ServiceAccountCredentials.make_creds(json_key_io: key, scope: DEFAULT_SCOPE)
-        else
-          raise ConfigError.new("Unknown auth method: #{task['auth_method']}")
-        end
- 
-        GoogleDrive::Session.new(credentials)
-          .spreadsheet_by_url(task["spreadsheet_url"])
-          .worksheet_by_title(task["worksheet_title"])
-      end
-
-      def self.determine_start_index(worksheet, task, schema, mode)
-        task["row_index"] = r = task["start_row"]
-        task["col_index"] = c = task["start_column"]
-        previous_record_exists = false
-
-        if mode == :append
-          column_range = c...(c + schema.length)
-          next_row_index = last_record_index(worksheet, column_range) + 1
-
-          if r < next_row_index
-            previous_record_exists = true
-            task["row_index"] = next_row_index
-          end
-        end
-
-        task["previous_record_exists"] = previous_record_exists
-      end
-
-      def self.last_record_index(worksheet, column_range)
-        # find last records in column range on worksheet.
-        worksheet.cells
-          .select {|(_, col_index), value|  not value.empty? and column_range.include? col_index }
-          .map    {|(row_index, _), _| row_index }
-          .max or 0
-      end
-
-      def self.write_header_line(worksheet, schema, task, mode)
-        worksheet.update_cells(task["start_row"], task["start_column"], [schema.names])
-
-        task["row_index"] += 1 unless task["previous_record_exists"]
-      end
-
-      def self.clean_previous_records(worksheet, schema, task)
-        row_range    = task["row_index"]..worksheet.num_rows
-        column_range = task["col_index"]...(task["col_index"] + schema.length)
-
-        row_range.each do |r|
-          column_range.each do |c|
-            worksheet[r, c] = ''
-          end
-        end
+      def init_cursor(client)
+        client.set_cursor_to_last_row
       end
 
       def format(type, v)
