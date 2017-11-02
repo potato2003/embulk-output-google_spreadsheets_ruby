@@ -31,7 +31,7 @@ module Embulk
         task = {
           # required
           "json_keyfile"     => config.param("json_keyfile",      LocalFile, nil),
-          "spreadsheet_url"  => config.param("spreadsheet_url",   :string),
+          "spreadsheets_url" => config.param("spreadsheets_url",   :string),
           "worksheet_title"  => config.param("worksheet_title",   :string),
 
           # optional

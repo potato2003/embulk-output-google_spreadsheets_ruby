@@ -16,7 +16,7 @@ module Embulk
           @task = task
           @schema = schema
 
-          @spreadsheets_url = task['spreadsheet_url']
+          @spreadsheets_url = task['spreadsheets_url']
           @spreadsheets_id  = spreadsheets_id_by_url(@spreadsheets_url)
           if @spreadsheets_id.nil?
             raise ArgumentError, "failed to extract spreadsheet's id from url, maybe given spreadsheets_url is invalid."

@@ -11,7 +11,7 @@
 
 - auth_method (string, default: 'authorized_user'): 'authorized_user' or 'service_account'
 - json_keyfile (string, required): credential file path or `content` string
-- spreadsheet_url (string, required): your spreadsheet's url
+- spreadsheets_url (string, required): your spreadsheet's url
 - worksheet_title (string, required): worksheet's title
 - mode (string, default: append): writing record method, available mode are `append` and `replace`
 - header_line (bool, default: false): if true, write header to first record
@@ -48,7 +48,7 @@ out:
         "refresh_token": "***************************"
       }
   # json_keyfile: './keyfile.json'
-  spreadsheet_url: 'https://docs.google.com/spreadsheets/d/16RSM_xj5ZB4rz0WBlnIbD1KHO46KASnAY04e_oYUSEE/edit'
+  spreadsheets_url: 'https://docs.google.com/spreadsheets/d/16RSM_xj5ZB4rz0WBlnIbD1KHO46KASnAY04e_oYUSEE/edit'
   worksheet_title: 'シート1'
   start_row: 1
   start_column: 1
