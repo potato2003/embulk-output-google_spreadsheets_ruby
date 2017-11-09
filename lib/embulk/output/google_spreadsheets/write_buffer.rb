@@ -40,8 +40,8 @@ module Embulk
           #
           # | Offset | Length | Expl
           # |  0     | 4      | crc32 of marshal data
-          # |  8     | 4      | length of marshal data
-          # | 12     | ??     | marshal data (maximum size 2^32 − 1)
+          # |  4     | 4      | length of marshal data
+          # |  8     | ??     | marshal data (maximum size 2^32 − 1)
           m_data  = Marshal.dump(r)
           m_crc32 = Zlib.crc32(m_data)
           m_len   = m_data.size
