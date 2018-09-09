@@ -6,7 +6,7 @@ Gem::Specification.new do |spec|
   spec.description   = "Dumps records to Google Spreadsheets."
   spec.email         = ["potato2003@gmail.com"]
   spec.licenses      = ["MIT"]
-  # TODO set this: spec.homepage      = "https://github.com/ryuji.ito/embulk-output-google_spreadsheets"
+  spec.homepage      = "https://github.com/potato2003/embulk-output-google_spreadsheets_ruby"
 
   spec.files         = `git ls-files`.split("\n") + Dir["classpath/*.jar"]
   spec.test_files    = spec.files.grep(%r{^(test|spec)/})
