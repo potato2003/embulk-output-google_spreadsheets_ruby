@@ -65,7 +65,7 @@ module Embulk
           client.write_header_line
         end
 
-        Embulk.logger.info("set task: #{task.inspect}")
+        Embulk.logger.info { "set task: #{task.inspect}" }
 
         task_reports = yield(task)
         next_config_diff = {}
@@ -98,7 +98,7 @@ module Embulk
           num_records += 1
         end
 
-        Embulk.logger.info("buffering #{num_records} records")
+        Embulk.logger.info { "buffering #{num_records} records" }
       end
 
       def finish
@@ -111,7 +111,7 @@ module Embulk
           @client.write_records(chunked_records)
         end
 
-        Embulk.logger.info("finish to write total %d records" % total)
+        Embulk.logger.info { "finish to write total %d records" % total }
 
         @buffer.close
       end
