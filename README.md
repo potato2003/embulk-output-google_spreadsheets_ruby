@@ -1,5 +1,7 @@
 # Google Spreadsheets output plugin for Embulk
 
+this pluging has similar interface and implementation with https://github.com/medjed/embulk-input-google_spreadsheets.
+
 ## Overview
 
 * **Plugin type**: output
